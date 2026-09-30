@@ -27,6 +27,8 @@ export interface AgentTool {
     toolCallId: string,
     params: Record<string, unknown>,
     signal: AbortSignal,
+    /** 流式回传：长任务（如 run_eval 跑几分钟）边跑边报进度 */
+    onUpdate?: (chunk: string) => void,
   ): Promise<ToolResult>
 }
 
@@ -47,6 +49,7 @@ export type AgentEvent =
   | { type: 'turn_start' }
   | { type: 'message_update'; content: string }
   | { type: 'tool_execution_start'; toolName: string; args: unknown }
+  | { type: 'tool_execution_update'; toolName: string; chunk: string }
   | { type: 'tool_execution_end'; toolName: string; isError: boolean }
   | { type: 'turn_end' }
   | { type: 'agent_end' }

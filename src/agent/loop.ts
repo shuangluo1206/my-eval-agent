@@ -221,6 +221,8 @@ export class Agent {
           tc.id,
           (tc.args ?? {}) as Record<string, unknown>,
           this.abortController?.signal || new AbortController().signal,
+          // 流式回传接线：工具报进度 → 变成事件 → 外面订阅的人能看见
+          (chunk) => this.emit({ type: 'tool_execution_update', toolName: tc.name, chunk }),
         )
         results.push(result)
         this.emit({ type: 'tool_execution_end', toolName: tc.name, isError: !!result.isError })

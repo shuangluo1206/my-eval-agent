@@ -15,7 +15,9 @@
 import type {
   Model, ModelContext, LLMMessage, LLMEvent, ToolCall,
 } from '../ai/types.js'
-import type { AgentEvent, AgentMessage, AgentTool, ToolResult } from './types.js'
+import type {
+  AgentEvent, AgentMessage, AgentTool, ToolResult, AgentHooks,
+} from './types.js'
 import { generateId } from './types.js'
 import { ToolRegistry } from '../tools/registry.js'
 
@@ -23,6 +25,8 @@ export interface AgentLoopConfig {
   systemPrompt: string
   model: Model
   tools: AgentTool[]
+  /** M4：三钩子（可选，垂直逻辑从外面插进循环） */
+  hooks?: AgentHooks
   /** 可选：订阅生命周期事件（日志/UI 用） */
   onEvent?: (event: AgentEvent) => void
 }
@@ -35,12 +39,14 @@ export class Agent {
   errorMessage: string | undefined
 
   private toolRegistry = new ToolRegistry()
+  private hooks?: AgentHooks
   private onEvent?: (event: AgentEvent) => void
   private abortController: AbortController | null = null
 
   constructor(config: AgentLoopConfig) {
     this.model = config.model
     this.systemPrompt = config.systemPrompt
+    this.hooks = config.hooks
     this.onEvent = config.onEvent
     for (const tool of config.tools) {
       this.toolRegistry.registerTool(tool)
@@ -77,6 +83,11 @@ export class Agent {
   private async runLoop(): Promise<void> {
     while (true) {
       this.emit({ type: 'turn_start' })
+
+      // 0. 钩子① transformContext：发给模型前瘦身历史（防上下文爆炸）
+      if (this.hooks?.transformContext) {
+        this.messages = await this.hooks.transformContext(this.messages)
+      }
 
       // 1. Agent 消息 → LLM 消息
       const llmMessages = this.convertToLlm()
@@ -216,25 +227,50 @@ export class Agent {
       }
 
       this.emit({ type: 'tool_execution_start', toolName: tc.name, args: tc.args })
+
+      // 钩子② beforeToolCall：前置校验，block=true 就不执行了
+      const block = await this.hooks?.beforeToolCall?.({
+        toolCall: tc,
+        args: (tc.args ?? {}) as Record<string, unknown>,
+        messages: this.messages,
+      })
+      if (block?.block) {
+        // 拦下 ≠ 崩：给模型一条 isError 结果，它能看到理由并换姿势
+        results.push({
+          content: [{ type: 'text', text: `工具调用被拦截: ${block.reason ?? '未说明原因'}` }],
+          isError: true,
+        })
+        this.emit({ type: 'tool_execution_end', toolName: tc.name, isError: true })
+        continue
+      }
+
+      let result: ToolResult
       try {
-        const result = await tool.execute(
+        result = await tool.execute(
           tc.id,
           (tc.args ?? {}) as Record<string, unknown>,
           this.abortController?.signal || new AbortController().signal,
           // 流式回传接线：工具报进度 → 变成事件 → 外面订阅的人能看见
           (chunk) => this.emit({ type: 'tool_execution_update', toolName: tc.name, chunk }),
         )
-        results.push(result)
-        this.emit({ type: 'tool_execution_end', toolName: tc.name, isError: !!result.isError })
       } catch (e) {
         // 兜底：工具崩了 = 模型收到一条写着报错信息的 toolResult，循环不炸
         const msg = e instanceof Error ? e.message : String(e)
-        results.push({
-          content: [{ type: 'text', text: `工具执行失败: ${msg}` }],
-          isError: true,
-        })
-        this.emit({ type: 'tool_execution_end', toolName: tc.name, isError: true })
+        result = { content: [{ type: 'text', text: `工具执行失败: ${msg}` }], isError: true }
       }
+
+      // 钩子③ afterToolCall：成功失败都通知（工具抛异常也要走这，钩子才能收尾）
+      const after = await this.hooks?.afterToolCall?.({
+        toolCall: tc,
+        result,
+        messages: this.messages,
+      })
+      if (after?.terminate) {
+        result = { ...result, terminate: true }
+      }
+
+      results.push(result)
+      this.emit({ type: 'tool_execution_end', toolName: tc.name, isError: !!result.isError })
     }
     return results
   }

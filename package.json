@@ -10,6 +10,7 @@
     "m1": "tsx scripts/m1-smoke.ts",
     "m2": "tsx scripts/m2-fake-demo.ts",
     "m3": "tsx scripts/m3-demo.ts",
+    "m4": "tsx scripts/m4-demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

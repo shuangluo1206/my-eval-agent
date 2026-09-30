@@ -54,6 +54,45 @@ export type AgentEvent =
   | { type: 'turn_end' }
   | { type: 'agent_end' }
 
+// ── 三钩子（M4）──
+// 钩子 = 循环里预留的「插队口」，不改变循环本身，垂直逻辑从外面插进来。
+// 对照 my-easy-pi loop.ts:39-43 同名签名。
+
+/** beforeToolCall 的入参：模型想调什么工具、带什么参数、当前历史 */
+export interface ToolCallContext {
+  toolCall: ToolCall
+  args: Record<string, unknown>
+  messages: AgentMessage[]
+}
+
+/** beforeToolCall 的返回：block=true 拦下这次调用，reason 会作为 isError 结果回给模型 */
+export interface BlockResult {
+  block: boolean
+  reason?: string
+}
+
+/** afterToolCall 的入参：刚跑完的调用 + 结果 + 当前历史 */
+export interface ToolCallResultContext {
+  toolCall: ToolCall
+  result: ToolResult
+  messages: AgentMessage[]
+}
+
+/** afterToolCall 的返回：terminate=true 提前收工（出口②） */
+export interface AfterToolCallResult {
+  terminate?: boolean
+}
+
+/** 三钩子集合（AgentLoopConfig 可选字段） */
+export interface AgentHooks {
+  /** 每轮发给模型前：改写/瘦身历史（防上下文爆炸） */
+  transformContext?: (messages: AgentMessage[]) => Promise<AgentMessage[]>
+  /** 工具执行前：前置校验，可拦截 */
+  beforeToolCall?: (ctx: ToolCallContext) => Promise<BlockResult | undefined>
+  /** 工具执行后：后处理，可提前终止循环 */
+  afterToolCall?: (ctx: ToolCallResultContext) => Promise<AfterToolCallResult | undefined>
+}
+
 export function generateId(): string {
   return `msg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }

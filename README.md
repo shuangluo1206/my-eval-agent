@@ -40,6 +40,23 @@ cli / demo 脚本
 - **M3 真活**：run_eval / read_trials 真工具 + 真模型联调
 - **M4 钩子**：轨迹瘦身 / 前置校验 / 达标收尾（验收各一例，M2/M3 回归全 PASS）
 - **M5 路由**：多模型路由降级
+- **M6 真 bench**：接入真实数据分析 bench 任务包——外层 Agent 自主拉起被测 agent（9 轮 12 次工具调用）→ 57 个判分点真判分（47.4/100）→ 读真轨迹复盘定位失分原因，全程 2.2 分钟、人工介入 0
+
+## 真实 bench 接入（M6）
+
+真 bench 走 `projects.local.json` 注册（gitignored，本地路径不入仓库），换同族项目零代码、一行注册：
+
+```json
+{
+  "taobao-ctr": {
+    "script": "/abs/path/to/数据分析_bench/002_taobao_ctr_analysis/run_eval.py",
+    "args": ["--api-base", "${EVAL_AGENT_BASE_URL}", "--api-key", "${EVAL_AGENT_API_KEY}", "--model", "GLM-5.3"],
+    "timeoutMs": 1800000
+  }
+}
+```
+
+产物解析做多级格式探测（outcome_grade.json → result.json），适配代码跟着「格式家族」走、不跟项目数走——数据分析_bench 001~010 与 KA 系任务包共用同一套产物约定，全部一行接入。轨迹摘要同时支持 mini-bench 夹具格式与 ducc 风格真轨迹（tool_use / reasoning / text 事件）。
 
 ## 差异化一：垂直化三钩子
 
@@ -83,6 +100,7 @@ npm run m1             # M1 冒烟：真调网关一次（含工具调用）
 ```bash
 npm run typecheck && npm run m2 && npm run m4 && npm run m5   # 不烧 token
 npm run m3                                                    # 真模型联调（烧 token）
+npm run m6                                                    # 真实 bench 全链路（烧 token，需 projects.local.json）
 ```
 
 ## 致谢

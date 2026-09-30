@@ -19,6 +19,14 @@ interface TrajectoryEntry {
   tool_calls?: { name?: string; args?: unknown }[]
   toolCallId?: string
   isError?: boolean
+  // 真 bench（数据分析_bench / KA 包）的 ducc 风格轨迹：
+  // {type: "step_start"|"reasoning"|"tool_use"|"text"|..., part: {...}}
+  part?: {
+    type?: string
+    text?: string
+    tool?: string
+    state?: { status?: string; input?: unknown; output?: string }
+  }
   [key: string]: unknown
 }
 
@@ -26,6 +34,26 @@ interface TrajectoryEntry {
 function summarize(entry: TrajectoryEntry, lineNo: number): string {
   const parts: string[] = []
 
+  // ── 格式二：ducc 风格真轨迹（type + part）──
+  if (entry.part && typeof entry.part === 'object') {
+    const p = entry.part
+    if (p.tool) {
+      // 工具调用：名字 + 入参 + 状态（失败/ERROR 要亮出来）
+      const inputStr = JSON.stringify(p.state?.input ?? {})
+      const inputShort = inputStr.length > 60 ? inputStr.slice(0, 60) + '…' : inputStr
+      const failed = p.state?.status === 'failed'
+        || (p.state?.output ?? '').startsWith('ERROR')
+      parts.push(`工具 ${p.tool}${inputShort}${failed ? ' ⚠️失败' : ' ✓'}`)
+    } else if (p.text) {
+      const short = p.text.length > 60 ? p.text.slice(0, 60) + '…' : p.text
+      parts.push(`${entry.type === 'reasoning' ? '思考' : '文本'}: ${short.replace(/\n/g, ' ')}`)
+    } else {
+      parts.push(`${entry.type ?? '?'}（无内容）`)
+    }
+    return `${String(lineNo).padStart(3)} | ${parts.join(' ；')}`
+  }
+
+  // ── 格式一：mini-bench 夹具风格（role / tool_calls / content）──
   const who = entry.role ?? entry.type ?? '?'
 
   if (Array.isArray(entry.tool_calls) && entry.tool_calls.length > 0) {

@@ -12,6 +12,7 @@
     "m3": "tsx scripts/m3-demo.ts",
     "m4": "tsx scripts/m4-demo.ts",
     "m5": "tsx scripts/m5-demo.ts",
+    "m6": "tsx scripts/m6-demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

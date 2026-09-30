@@ -1,0 +1,13 @@
+{
+  "项目名（run_eval 工具的 project 参数）": {
+    "script": "评测脚本绝对路径（.py 用 python3 拉，.sh 用 bash）",
+    "args": [
+      "传给脚本的参数",
+      "${EVAL_AGENT_BASE_URL} 会被替换成 .env 里的值"
+    ],
+    "timeoutMs": 1800000
+  },
+  "another-bench": {
+    "script": "/absolute/path/to/another/run_eval.py"
+  }
+}

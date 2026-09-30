@@ -8,7 +8,8 @@
   },
   "scripts": {
     "m1": "tsx scripts/m1-smoke.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "m2": "tsx scripts/m2-fake-demo.ts"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

@@ -1,0 +1,18 @@
+{
+  "name": "my-eval-agent",
+  "version": "0.1.0",
+  "description": "评测工程师垂直 Agent：手写 Agent 循环 + 评测工具层（run_eval / read_trials）",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "m1": "tsx scripts/m1-smoke.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  }
+}

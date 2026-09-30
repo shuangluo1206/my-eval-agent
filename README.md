@@ -15,17 +15,18 @@ npm run m1              # M1 冒烟：真调网关一次（含工具调用）
 - M2 循环：Agent while 主循环 + fake provider 演示（参数碎片拼装）
 - M3 真活：run_eval / read_trials 真工具 + 真模型联调
 - M4 钩子：轨迹瘦身 / 前置校验 / 达标收尾（验收各一例）
+- M5 路由：多模型路由（主力开局掉线当轮无缝切；write_file 丢 path 触发质量降级）
 
 ## 分层
 
-- src/ai/        模型接入：类型契约 / SSE 拆包 / OpenAI 兼容层 / 注册表 / Provider
+- src/ai/        模型接入：类型契约 / SSE 拆包 / OpenAI 兼容层 / 注册表 / Provider / 多模型路由
 - src/agent/     Agent 循环 + 三钩子（loop.ts / eval-hooks.ts）
 - src/tools/     评测工具：run_eval / read_trials
 - fixtures/      mini-bench 测试夹具（5 秒假评测，产物形状对齐真 bench）
 
 ## 验收
 
-npm run typecheck && npm run m2 && npm run m4   # 不烧 token
-npm run m3                                      # 真模型联调（烧 token）
+npm run typecheck && npm run m2 && npm run m4 && npm run m5   # 不烧 token
+npm run m3                                                    # 真模型联调（烧 token）
 
 详见设计稿。

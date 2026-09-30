@@ -11,6 +11,7 @@
     "m2": "tsx scripts/m2-fake-demo.ts",
     "m3": "tsx scripts/m3-demo.ts",
     "m4": "tsx scripts/m4-demo.ts",
+    "m5": "tsx scripts/m5-demo.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
